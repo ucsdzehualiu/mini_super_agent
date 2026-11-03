@@ -4,12 +4,13 @@
 
 不是 DSH 本身，也不是它的完整能力。DSH 是产品级的常驻 Agent 系统，这里只挑了主干：多会话管理、事件过滤、订阅直通、链式召回、挂起等人、外部巡检、以及配套的 trace 和日志。
 
-AgentScope 2.0 + Textual，单进程，本地可跑。
+AgentScope 2.0 + 标准库 `asyncio` + 原生 HTML 控制台，单进程，本地可跑。约 4000 行 Python，96 个测试。
+
+想看**设计和实现细节**（为什么这么拆、AgentScope 怎么用、踩了哪些坑、每个机制的代码位置），看 [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)。这份 README 只讲怎么用和有什么。
 
 ```bash
 pip install -r requirements.txt
-python web.py            # 浏览器控制台 http://127.0.0.1:8080
-python main.py           # 终端界面
+python web.py            # 打开 http://127.0.0.1:8080
 ```
 
 首次使用先配模型（也可以启动后在网页右上角「设置模型」里填）：
@@ -18,9 +19,7 @@ python main.py           # 终端界面
 python tools/setup_model.py --ping
 ```
 
-Windows 下双击 `start_web.bat` 或 `start.bat`。两个界面共用同一个 `Runtime`，只是观察者不同。
-
-![控制台](docs/screenshot-morning.svg)
+Windows 下直接双击 `start_web.bat`，它会自己找 Python、检查依赖、起服务并打开浏览器。
 
 ---
 
@@ -177,7 +176,7 @@ python tools/inspect_log.py --list     # 历史运行列表
 
 界面上除了任务表和 Trace 树，左侧有一块**对话区**：你说的每句话和系统的回应都在那里。每条消息都会有回应，包括被过滤掉的（会说明为什么没处理）。
 
-按 **F3** 自动播放剧本，**F5** 在三个视图之间切换。浏览器版把这些做成按钮和折叠面板，不用记键位。
+右上角「播放剧本」按顺序跑一遍上面六句话，不用手敲。
 
 ---
 
@@ -252,7 +251,6 @@ Worker 按角色挂不同工具集：researcher 有搜索、抓取和挂起等�
 ## 代码结构
 
 ```
-main.py          终端界面：面板布局、@work 入口、增量刷新、三视图
 web.py           浏览器界面：同一个 Runtime，标准库 HTTP
 ui/console.html  前端页面（时间轴 / 调用树 / 详情），改样式不用动 Python
 ui/settings.html 模型设置页
@@ -266,14 +264,14 @@ headless.py      不启动界面的冒烟
 scenarios.py     剧本数据，三个入口共用
 tools/inspect_log.py   读日志定位问题
 tools/setup_model.py   交互式配置模型
-start.bat / start_web.bat   Windows 一键启动
+start_web.bat                Windows 一键启动
 config.example.json        配置模板（真实的 config.json 不入库）
 tests/           109 个测试
 ```
 
 依赖方向单向：`trace.py` 不引 agentscope，`runtime.py` 不引 textual。运行时与界面之间只有一个 `asyncio.Queue`，界面是可替换的观察者。
 
-界面刷新全部是增量的：Trace 树按节点指纹比对，任务表按行 key 稳定更新，日志只追加。终端版最底下一行实时显示「重建」和「累计跳过」的次数。
+界面刷新全部是增量的：Trace 树按节点指纹比对，任务表按行 key 稳定更新，日志只追加。顶栏和任务表都会增量更新，没变化就不碰 DOM。
 
 ---
 
@@ -309,14 +307,3 @@ python headless.py      # 两个场景跑通并断言
 - **搜索是尽力而为**。内置的 DuckDuckGo Lite 靠解析 HTML，对方改版就会失效；要稳定就用 Tavily/博查。
 
 ---
-
-## 键位
-
-| 键 | 作用 |
-| --- | --- |
-| Enter | 发送 |
-| F3 | 播放演示剧本 |
-| F5 | 切换 树 / 时间轴 / 任务 |
-| A / X | 批准 / 驳回选中任务 |
-| F2 | 全部取消（协作式） |
-| F1 | 帮助 |

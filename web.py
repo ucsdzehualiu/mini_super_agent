@@ -27,8 +27,8 @@ from typing import Any
 from urllib.parse import parse_qs, urlparse
 
 import config as config_module
-import main as tui
 from runlog import RunLog
+from reply import reply_text
 from runtime import FakeChatModel, Runtime, build_chat_model
 from trace import TraceEvent
 
@@ -206,7 +206,7 @@ class Service:
         async def run() -> None:
             try:
                 result = await self.runtime.process(text, source="web")
-                self.state.push_reply("Router", tui.reply_text(result),
+                self.state.push_reply("Router", reply_text(result),
                                       route=result.route, note=result.gate.route_note)
             except Exception as exc:  # noqa: BLE001
                 if self.log is not None:
@@ -228,6 +228,24 @@ class Service:
     def cancel_all(self) -> None:
         n = self.runtime.pool.cancel_all()
         self.state.push_reply("Router", f"已请求取消 {n} 个任务")
+
+    def demo(self) -> None:
+        """按剧本顺序播一遍，步与步之间留间隔，方便观察每一步的效应。"""
+
+        async def run() -> None:
+            import scenarios as SC
+
+            for step in SC.MORNING:
+                if not step.say:
+                    continue
+                self.state.push_reply("你", step.say)
+                result = await self.runtime.process(step.say, source="web")
+                self.state.push_reply("Router", reply_text(result),
+                                      route=result.route,
+                                      note=result.gate.route_note)
+                await asyncio.sleep(1.2)
+
+        asyncio.run_coroutine_threadsafe(run(), self.loop)
 
 
 UI_DIR = Path(__file__).resolve().parent / "ui"
@@ -332,6 +350,10 @@ def make_handler(service: Service):
                 return
             if path == "/api/cancel_all":
                 service.cancel_all()
+                self._json({"ok": True})
+                return
+            if path == "/api/demo":
+                service.demo()
                 self._json({"ok": True})
                 return
             if path == "/api/config":

@@ -79,6 +79,7 @@
   <span><b>Super Agent</b></span>
   <span id="h-model" class="dim">…</span>
   <a href="/settings" style="color:#8ec7ff;text-decoration:none">设置</a>
+  <button id="demo" style="padding:2px 9px;font-size:12px">播放剧本</button>
   <span id="h-sum" class="dim"></span>
 </header>
 
@@ -152,6 +153,15 @@ $("#f").addEventListener("submit", async e => {
   try { await fetch("/api/message", {method:"POST", headers:{"Content-Type":"application/json"},
                                      body: JSON.stringify({text:q})}); }
   finally { $("#send").disabled = false; $("#q").focus(); }
+});
+
+$("#demo").addEventListener("click", async () => {
+  $("#demo").disabled = true;
+  try {
+    await fetch("/api/demo", {method: "POST", headers: {"Content-Type": "application/json"},
+                              body: "{}"});
+    toast("开始播放剧本");
+  } finally { setTimeout(() => { $("#demo").disabled = false; }, 4000); }
 });
 
 // ---- 对话：只追加，不重建（否则一选中就被刷掉） ---------------------------

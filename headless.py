@@ -14,7 +14,6 @@ import argparse
 import asyncio
 import io
 import sys
-from pathlib import Path
 
 from rich.console import Console
 
@@ -138,46 +137,10 @@ async def run_all(ids: list[str] | None = None, *, speed: float = 1.0) -> int:
     return 0 if fails == 0 else 1
 
 
-async def run_ui(ids: list[str] | None, *, size: tuple[int, int], svg: str | None,
-                 text: str | None) -> int:
-    import main as app_module
-
-    app = app_module.ConsoleApp(watchdog_interval=0.5)
-    async with app.run_test(size=size) as pilot:
-        await pilot.pause(0.3)
-        await app._run_morning()
-        await pilot.pause(0.5)
-        # 有挂起就现场批准一次，把整条人机协作演完
-        pending = app.runtime.needs_human()
-        if pending:
-            await app.runtime.approve(pending[0].task_id)
-            await pilot.pause(0.5)
-        app.action_toggle_view()      # 时间轴
-        await pilot.pause(0.4)
-        screen = app.export_text()
-        print(screen)
-        print("\n" + "=" * 88)
-        print("统计：", app.runtime.stats())
-        if svg:
-            print("SVG 截图：", app.export_svg(svg))
-        if text:
-            p = Path(text)
-            p.parent.mkdir(parents=True, exist_ok=True)
-            p.write_text(screen, encoding="utf-8")
-            print("文本画面：", p)
-        ok = not app.runtime.table.active() or all(
-            t.is_blocked for t in app.runtime.table.active())
-        print(f"\n[{'PASS' if ok else 'FAIL'}] 没有任务卡死在执行中")
-        return 0 if ok else 1
-
-
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(description="Super Agent headless 演示 / 冒烟")
-    p.add_argument("--ui", action="store_true")
     p.add_argument("--scenario", action="append", default=None)
     p.add_argument("--list", action="store_true")
-    p.add_argument("--svg")
-    p.add_argument("--text")
     p.add_argument("--size", default="150x50")
     p.add_argument("--speed", type=float, default=1.0)
     args = p.parse_args(argv)
@@ -186,9 +149,6 @@ def main(argv: list[str] | None = None) -> int:
         for sc in SC.SCENARIOS:
             print(f"{sc.id:<10} {sc.title}（{len(sc.steps)} 步）")
         return 0
-    if args.ui:
-        w, h = (int(x) for x in args.size.lower().split("x"))
-        return asyncio.run(run_ui(args.scenario, size=(w, h), svg=args.svg, text=args.text))
     return asyncio.run(run_all(args.scenario, speed=args.speed))
 
 
