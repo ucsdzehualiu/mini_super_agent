@@ -428,7 +428,68 @@ python headless.py      # 场景冒烟，断言结构
 
 ---
 
-## 18. 如果只记三件事
+## 18. AgentScope 到底用在哪（以及为什么编排不用它）
+
+这是最容易被追问的一题：**既然调度是 asyncio，那 AgentScope 是不是可有可无？**
+
+诚实的答案是：**编排层一行 AgentScope 都没有，但执行单元完全依赖它**。
+
+### 编排层：纯 asyncio
+
+任务表、状态机、拆单、并行拉起、挂起恢复、巡检、取消，全部是标准库：
+
+```python
+# 并行拉起
+await asyncio.gather(*coros, return_exceptions=True)
+
+# 后台作业（跨执行体存活）
+self.jobs[task_id] = asyncio.ensure_future(runner())
+
+# Watchdog 是独立任务
+self._task = asyncio.create_task(self._loop(), name="watchdog")
+
+# 挂起后的自动恢复
+self._resumer = asyncio.create_task(self._resume_loop(), name="waiter")
+```
+
+这一层没有任何框架介入。**这是刻意的**：如果让框架来管多 Agent 的生命周期，任务状态就会被绑在框架的会话对象上，也就没法做到"执行体销毁、任务还在表里、可以重新拉起"——而那正是整个设计的地基。
+
+### 执行层：一个 Worker = 一个 AgentScope Agent
+
+```python
+# runtime.py · WorkerPool._build_agent()
+return Agent(name=task.name,
+             system_prompt=prompts.worker_prompt(task.worker_type),
+             model=self.model,                        # ChatModelBase
+             toolkit=toolkit,                         # Toolkit / FunctionTool
+             react_config=ReActConfig(max_iters=6),   # ReAct 循环上限
+             model_config=ModelConfig(max_retries=2)) # 重试策略
+```
+
+单个 Worker 内部要做的事——多轮「模型思考 → 调工具 → 看结果 → 再思考」——全部由 AgentScope 的 ReAct 循环完成。我提供的是工具集和消息，拿回来的是最终文本。
+
+### 具体拆一下它提供了什么
+
+| AgentScope 的能力 | 我在哪用 | 不用它会怎样 |
+| --- | --- | --- |
+| `Agent.reply_stream()` + ReAct 循环 | Worker 执行体 | 要自己写多轮工具调用循环、终止判断、上下文拼装 |
+| `Toolkit` / `FunctionTool` | 按角色注册工具 | 要自己从函数签名和 docstring 生成 JSON Schema、解析模型返回的 tool_call |
+| `ChatModelBase` | `FakeChatModel` 继承它；`OpenAIChatModel` 接华为云 | 要自己对每家 API 写一遍请求/流式解析 |
+| `Msg` / `UserMsg` / `TextBlock` | 所有模型输入输出 | 要自己定一套消息协议 |
+| `ToolCallStartEvent` / `ModelCallEndEvent` | trace 埋点、token 统计 | 拿不到执行中的事件，只能看最终结果 |
+| `PermissionDecision` | 工具授权（现在是 ALLOW 桩） | 没有权限钩子 |
+
+### 一句话总结
+
+> **AgentScope 负责"一个 Agent 怎么想"，asyncio 负责"多个 Agent 怎么协作"。**
+
+这两件事恰好是分层的：框架擅长的部分（ReAct、工具协议、模型适配）交给框架；框架不擅长的部分（跨会话的生命周期、状态外置、挂起恢复、可观测）自己写。
+
+如果一个项目只用 AgentScope 的 `msghub` / pipeline 做多 Agent，那 Router 和 Worker 的关系就会被框架的会话模型框住，任务状态也难以外置。这个项目把编排抽出来的原因就在这里——**不是重复造轮子，是为了让任务状态能离开执行体**。
+
+---
+
+## 19. 如果只记三件事
 
 1. **状态离开调用栈**，才有并行、追加、取消、恢复。这是整套设计的地基。
 2. **"等"要建模成状态**，不能建模成阻塞。挂起和恢复是这套系统里最容易做错、也最能体现功底的地方。
