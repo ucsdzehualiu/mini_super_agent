@@ -1,0 +1,16 @@
+{
+  "model": {
+    "provider": "huawei-maas",
+    "base_url": "https://api.modelarts-maas.com/openai/v1",
+    "api_key": "",
+    "model_name": "deepseek-v4.1-flash",
+    "temperature": 0.6,
+    "max_tokens": 2048,
+    "stream": true,
+    "context_size": 128000
+  },
+  "watchdog": 3.0,
+  "suspect": 60.0,
+  "web_port": 8080,
+  "log_dir": "logs"
+}

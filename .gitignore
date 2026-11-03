@@ -1,0 +1,18 @@
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+
+# 运行时产物
+tasks.jsonl
+console_*.svg
+*_dump.txt
+_err.txt
+_run_out.txt
+_run_err.txt
+logs/
+
+# 含 API Key，绝对不要提交
+config.json
+config.local.json

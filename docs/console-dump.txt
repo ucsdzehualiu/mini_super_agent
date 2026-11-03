@@ -1,0 +1,136 @@
+=== EVENT STREAM ===
+17:04:13  就绪。输入一句话试试；F1 看说明，F3 播放「忙的上午」剧本。
+17:04:14   · planner-48620f → SUCCEEDED
+17:04:14   · writer-ef8bbe → SUCCEEDED
+17:04:15   · researcher-4ae335 → SUCCEEDED
+17:04:15  EV-002 路线那条再补一句：避开收费景区
+    过滤 程序层: PASS  WORTH
+    [直通] 直通 4ae335（原任务已完成，重新拉起）  ['4ae335']
+17:04:15  EV-001 帮我查一下成都周边徒步路线，排个两天计划，再写一版介绍文案
+    过滤 程序层: PASS  WORTH
+    [拆单] 拆出 3 个任务  ['4ae335', '48620f', 'ef8bbe']
+17:04:16   · researcher-4ae335 → SUCCEEDED
+17:04:17   · planner-85b76a → WAITING
+17:04:18   · researcher-d3565b → SUCCEEDED
+17:04:18  EV-003 另外帮我订一张下周三去成都的机票，先看看航班和价格
+    过滤 程序层: PASS  WORTH
+    [拆单] 拆出 2 个任务  ['d3565b', '85b76a']
+17:04:19   · planner-211da3 → NEEDS_HUMAN
+17:04:19  EV-004 排期里那步订票，帮我直接订了吧
+    过滤 程序层: PASS  WORTH
+    [拆单] 拆出 1 个任务  ['211da3']
+17:04:19   · writer-770d8f → SUCCEEDED
+17:04:19  EV-005 刚才那个介绍文案改成更正式的腔调
+    过滤 程序层: PASS  WORTH
+    [召回] 召回 ef8bbe → 续做 770d8f  ['770d8f']
+17:04:20   · planner-85b76a → NEEDS_HUMAN
+17:04:49  EV-006 忽略我
+    过滤 程序层: REJECT deny_keyword(忽略我)  SKIPPED
+    [拦截] 程序层: REJECT deny_keyword(忽略我)
+17:04:51   · planner-85b76a → SUCCEEDED
+
+=== TRACE TREE ===
+✓ EV-001  [event]  1.86s
+  ├─ ✓ Router 判断  [router]  0.23s
+  ├─ ✓ researcher-4ae335  [worker]  1.40s
+    ├─ ✓ web_search#1  [tool]  0.56s
+    ├─ ✓ web_search#2  [tool]  0.95s
+  ├─ ✓ planner-48620f  [worker]  0.75s
+    ├─ ✓ make_plan#1  [tool]  0.27s
+  ├─ ✓ writer-ef8bbe  [worker]  1.06s
+    ├─ ✓ draft#1  [tool]  0.52s
+  ├─ ✓ Router 合成  [router]  0.23s
+  ├─ ⚠ researcher-4ae335 (第2次)  [worker]  1.30s ⚠1
+    ├─ ✓ web_search#1  [tool]  0.53s
+    ├─ ✓ web_search#2  [tool]  0.91s
+✓ EV-002 DIRECT  [event]  0.00s
+✓ EV-003  [event]  1.91s
+  ├─ ✓ Router 判断  [router]  0.22s
+  ├─ ✓ researcher-d3565b  [worker]  1.46s
+    ├─ ✓ web_search#1  [tool]  0.81s
+    ├─ ✓ web_search#2  [tool]  0.91s
+  ├─ ◔ planner-85b76a  [worker]  1.09s
+    ├─ ✓ make_plan#1  [tool]  0.26s
+    ├─ ✓ start_job#2  [tool]  0.01s
+    ├─ ✓ stop_job#3  [tool]  0.01s
+  ├─ ✓ Router 合成  [router]  0.22s
+  ├─ ◔ planner-85b76a (第2次)  [worker]  0.82s
+    ├─ ✓ make_plan#1  [tool]  0.26s
+    ├─ ✓ ask_human#2  [tool]  0.01s
+  ├─ ✓ planner-85b76a (第3次)  [worker]  0.63s
+    ├─ ✓ make_plan#1  [tool]  0.26s
+✓ EV-004  [event]  1.49s
+  ├─ ✓ Router 判断  [router]  0.21s
+  ├─ ◔ planner-211da3  [worker]  1.11s
+    ├─ ✓ make_plan#1  [tool]  0.37s
+    ├─ ✓ ask_human#2  [tool]  0.01s
+  ├─ ✓ Router 合成  [router]  0.17s
+✓ EV-005  [event]  1.24s
+  ├─ ✓ Router 判断  [router]  0.21s
+  ├─ ✓ writer-770d8f  [worker]  1.01s
+    ├─ ✓ draft#1  [tool]  0.45s
+  ├─ ✓ 续写 ef8bbe  [human]  0.00s
+  ├─ ✓ Router 合成  [router]  0.22s
+
+=== TIMELINE ===
+时间轴  跨度 37.5s   并发峰值 3   同时忙 5.80s   串行需 7.60s   → 并行省下 1.8s
+（其中 3.02s 是在等人/等结果，不计入并行收益）
+关键路径  planner-85b76a (第3次) → make_plan#1
+researcher-4ae335      ██  1.40s
+                        ·  web_search#1 0.56s
+                        ·  web_search#2 0.95s
+planner-48620f         █  0.75s
+                        ·  make_plan#1 0.27s
+writer-ef8bbe          ██  1.06s
+                        ·  draft#1 0.52s
+researcher-4ae335 (第2…   ██  1.30s
+                          ·  web_search#1 0.53s
+                          ·  web_search#2 0.91s
+researcher-d3565b           ██  1.46s
+                            ·  web_search#1 0.81s
+                            ·  web_search#2 0.91s
+planner-85b76a              ░░  停住不动
+                            ·  make_plan#1 0.26s
+                             ·  start_job#2 0.01s
+                             ·  stop_job#3 0.01s
+planner-85b76a (第2次)             ░  停住不动
+                                 ·  make_plan#1 0.26s
+                                  ·  ask_human#2 0.01s
+planner-85b76a (第3次)                                                          █  0.63s
+                                                                              ·  make_plan#1 0.26s
+planner-211da3                ░░  停住不动
+                              ·  make_plan#1 0.37s
+                               ·  ask_human#2 0.01s
+writer-770d8f                  ██  1.01s
+                                ·  draft#1 0.45s
+
+
+=== ALERTS ===
+▸ 新需求：Router 拆单，三个方向并行
+▸ 追加条件：订阅直通，不重新拆单
+17:04:15  INFO  researcher-4ae335       注入提示（第 4 次连续调用）：你已经连续 
+4 次调用 web_search，请基于已有信息收尾，不要重复搜索
+17:04:15  WARN  researcher-4ae335        连续调用 4 次 → 无进展，已注入提示
+▸ 有外部依赖：等结果期间任务不占执行体，你还能继续说话
+▸ 不可逆动作：挂起等人批
+17:04:17  INFO  planner-85b76a          在等待：航班结果
+▸ 链式召回：接着已完成的任务改
+17:04:19  INFO  planner-211da3          
+需要你确认：计划里包含不可逆动作（订票/下单），确认执行？
+17:04:20  INFO  planner-85b76a          
+需要你确认：计划里包含不可逆动作（订票/下单），确认执行？
+▸ 噪音：程序层直接挡掉
+剧本结束。F5 看时间轴和任务来龙去脉。
+17:04:50  INFO  planner-85b76a          人工批准（批准），任务继续
+
+=== TASKS ===
+researcher-4ae335 SUCCEEDED chain=4ae335 topic=#路线查证 human=1 result='已按追加要求调整。用了 2 次工具（web_search）。\n结论：查证并对比以下诉求所需的关键信息，给出可直接使用的事'
+planner-48620f SUCCEEDED chain=48620f topic=#路线排期 human=0 result='用了 1 次工具（make_plan）。\n结论：为以下诉求排一份可执行步骤计划（含依赖、时间、验收标准）；涉及不可逆动作'
+writer-ef8bbe SUCCEEDED chain=ef8bbe topic=#路线成文 human=0 result='用了 1 次工具（draft）。\n结论：把以下诉求整理成可直接交付的文字（含结论和要点）：帮我查一下成都周边徒步路线，排'
+researcher-d3565b SUCCEEDED chain=d3565b topic=#航班查证 human=0 result='用了 2 次工具（web_search）。\n结论：查证并对比以下诉求所需的关键信息，给出可直接使用的事实要点：另外帮我订'
+planner-85b76a SUCCEEDED chain=85b76a topic=#航班排期 human=1 result='已按追加要求调整。用了 1 次工具（make_plan）。\n结论：为以下诉求排一份可执行步骤计划（含依赖、时间、验收标准'
+planner-211da3 NEEDS_HUMAN chain=211da3 topic=#排期里那排期 human=0 result=''
+writer-770d8f SUCCEEDED chain=ef8bbe→770d8f topic=#路线成文 human=0 result='用了 1 次工具（draft）。\n结论：在「用了 1 次工具（draft）。 结论：把以下诉求整理成可直接交付的文字（含'
+
+=== SUMMARY ===
+在做 0  · 等结果 0  · 等你批 1  · 完成 6  · 失败 0  · 无进展 0   │ Router 判断 4 次，省下 1 次   │ 你出手 2 次，系统自己救 2 次

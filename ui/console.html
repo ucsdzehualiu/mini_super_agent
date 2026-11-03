@@ -1,0 +1,349 @@
+<!doctype html>
+<html lang="zh"><head><meta charset="utf-8">
+<title>Super Agent Console</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+ *{box-sizing:border-box}
+ html,body{height:100%}
+ body{margin:0;display:grid;grid-template-rows:auto 1fr auto;background:#0f1117;color:#d7dce5;
+      font:14px/1.65 -apple-system,"Segoe UI","Microsoft YaHei",sans-serif}
+ header{display:flex;gap:14px;align-items:baseline;padding:9px 16px;background:#151823;
+        border-bottom:1px solid #222735;font-size:12.5px;flex-wrap:wrap}
+ header b{color:#8ec7ff}
+ main{display:grid;grid-template-columns:minmax(360px,1.05fr) minmax(380px,1fr);overflow:hidden}
+ #left,#right{display:flex;flex-direction:column;overflow:hidden;min-height:0}
+ #left{border-right:1px solid #222735}
+ .pane{overflow:auto;padding:10px 14px;min-height:0}
+ .pane h3{margin:0 0 8px;font-size:11.5px;letter-spacing:.09em;color:#6f7889;font-weight:600;
+          text-transform:uppercase;display:flex;justify-content:space-between;align-items:baseline}
+ #chat{display:flex;flex-direction:column;gap:10px;padding-bottom:8px}
+ .msg{max-width:94%;padding:9px 13px;border-radius:10px;white-space:pre-wrap;word-break:break-word;
+      user-select:text}
+ .me{align-self:flex-end;background:#16324f;border:1px solid #1f4d7a}
+ .bot{align-self:flex-start;background:#171b26;border:1px solid #242a3a}
+ .meta{font-size:11px;letter-spacing:.05em;margin-bottom:4px;opacity:.9}
+ .wait{align-self:flex-start;color:#8b93a4;font-size:12.5px;padding-left:4px}
+ form{display:flex;gap:8px;padding:10px 14px;border-top:1px solid #222735;background:#151823}
+ input[type=text]{flex:1;background:#0b0e14;border:1px solid #2a3143;color:#d7dce5;
+        border-radius:8px;padding:10px 12px;font-size:14px;outline:none}
+ input[type=text]:focus{border-color:#3b82f6}
+ button{background:#1f2a3d;color:#cfe1ff;border:1px solid #31405a;border-radius:8px;
+        padding:9px 13px;cursor:pointer;font-size:13px}
+ button:hover{background:#27344a}
+ button:disabled{opacity:.45;cursor:default}
+ table{width:100%;border-collapse:collapse;font-size:12.5px}
+ th,td{text-align:left;padding:5px 6px;border-bottom:1px solid #1b2029;vertical-align:top}
+ th{color:#6f7889;font-weight:600;font-size:11.5px;letter-spacing:.05em}
+ td.name{font-family:ui-monospace,Consolas,monospace;white-space:nowrap}
+ .st{font-weight:600;white-space:nowrap}
+ .running{color:#67d0e8}.ok{color:#5ddc9a}.error{color:#ff7b72}
+ .warn{color:#e8c15a}.waitcol{color:#7aa2ff}.queued{color:#8b93a4}
+ /* trace 视图 */
+ .tabs{display:flex;gap:6px;margin-bottom:8px}
+ .tabs button{padding:4px 10px;font-size:12px;border-radius:6px;background:#141821;
+              border:1px solid #232a38;color:#8b93a4}
+ .tabs button.on{background:#1f2a3d;color:#cfe1ff;border-color:#31405a}
+ .row{display:grid;grid-template-columns:150px 1fr 64px;gap:8px;align-items:center;
+      font-size:12.5px;padding:2px 0}
+ .row .nm{font-family:ui-monospace,Consolas,monospace;color:#b9c3d4;overflow:hidden;
+          text-overflow:ellipsis;white-space:nowrap}
+ .bars{position:relative;height:12px;background:#141821;border-radius:3px;overflow:hidden}
+ .bar{position:absolute;height:12px;border-radius:3px;opacity:.85}
+ .bar.running{background:#2b6f86}.bar.ok{background:#2f6b4f}.bar.error{background:#7a2b2b}
+ .bar.warn{background:#6b5a24}.bar.wait{background:#2b3a63}
+ .row .du{color:#6f7889;text-align:right;font-variant-numeric:tabular-nums}
+ .tree{font-family:ui-monospace,Consolas,monospace;font-size:12.5px}
+ .trow{display:flex;gap:6px;padding:2px 4px;border-radius:5px;cursor:pointer;white-space:nowrap;
+       overflow:hidden;text-overflow:ellipsis}
+ .trow:hover{background:#171c27}
+ .trow.sel{background:#1d2637}
+ .trow .du{color:#6f7889;margin-left:auto;padding-left:8px}
+ .lv0{color:#e6ecf5}.lv1{color:#b9c3d4}.lv2{color:#98a2b3}.lv3{color:#7f8a9c}
+ #detail{font-size:12.5px}
+ #detail .kv{display:grid;grid-template-columns:88px 1fr;gap:4px 10px;margin-bottom:8px}
+ #detail .kv span:first-child{color:#6f7889}
+ #detail pre{white-space:pre-wrap;word-break:break-word;background:#12151d;border:1px solid #1e2430;
+             border-radius:6px;padding:8px 10px;margin:0 0 8px;max-height:220px;overflow:auto}
+ .alert{padding:3px 0;font-size:12.5px;border-bottom:1px dashed #1b2029;user-select:text}
+ .lvl-WARN{color:#e8c15a}.lvl-ERROR{color:#ff7b72}.lvl-INFO{color:#7aa2ff}
+ .dim{color:#6f7889}
+ footer{display:flex;gap:16px;padding:6px 16px;background:#151823;border-top:1px solid #222735;
+        font-size:12px;color:#8b93a4;flex-wrap:wrap}
+ .kvf b{color:#c9d4e6}
+ #toast{position:fixed;right:16px;bottom:52px;background:#22304a;color:#dbe6f7;padding:8px 14px;
+        border-radius:8px;font-size:13px;opacity:0;transition:opacity .2s;pointer-events:none}
+ #toast.on{opacity:1}
+</style></head>
+<body>
+<header>
+  <span><b>Super Agent</b></span>
+  <span id="h-model" class="dim">…</span>
+  <a href="/settings" style="color:#8ec7ff;text-decoration:none">设置</a>
+  <span id="h-sum" class="dim"></span>
+</header>
+
+<main>
+  <section id="left">
+    <div class="pane" style="flex:1 1 auto"><h3>对话<span id="h-run" class="dim"></span></h3>
+      <div id="chat"></div></div>
+    <form id="f"><input id="q" type="text" autocomplete="off" autofocus
+      placeholder="说一句话，回车发送"><button id="send">发送</button></form>
+  </section>
+
+  <section id="right">
+    <div class="pane" style="flex:0 0 auto;max-height:34%">
+      <h3>任务<span id="h-count" class="dim"></span></h3>
+      <table id="tasks">
+        <thead><tr><th>task</th><th>状态</th><th>来源链</th><th>在等 / 次数</th><th>耗时</th><th></th></tr></thead>
+        <tbody></tbody></table>
+    </div>
+    <div class="pane" style="flex:1 1 auto;border-top:1px solid #222735">
+      <h3>Trace
+        <span class="tabs">
+          <button data-view="timeline" class="on">时间轴</button>
+          <button data-view="tree">调用树</button>
+        </span>
+      </h3>
+      <div id="timeline"></div>
+      <div id="tree" class="tree" style="display:none"></div>
+    </div>
+    <div class="pane" style="flex:0 0 26%;border-top:1px solid #222735">
+      <h3 id="detail-title">详情</h3><div id="detail" class="dim">点上面的 Trace 看细节</div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <span id="f-attn" class="kvf"></span>
+  <span id="f-inc" class="kvf"></span>
+  <span id="f-wd" class="kvf"></span>
+</footer>
+<div id="toast"></div>
+
+<script>
+"use strict";
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const ICON = {running:"●",ok:"✓",error:"✕",warn:"⚠",cancelled:"✕",waiting:"◔",queued:"○"};
+const CLS = {SUCCEEDED:"ok",FAILED:"error",RUNNING:"running",WAITING:"waitcol",NEEDS_HUMAN:"warn",
+             SUSPECT:"warn",STALLED:"warn",PENDING:"queued",CANCELLING:"warn",CANCELLED:"queued"};
+const ROUTE = {DIRECT:["直通","#d98bff"],RECALL:["召回","#7aa2ff"],ROUTER:["拆单","#67d0e8"],
+               GATE:["拦截","#8b93a4"],IGNORE:["不派","#8b93a4"],ANSWER:["回答","#5ddc9a"]};
+
+let seq = 0;               // 事件游标
+let rendered = 0;          // 已渲染的对话条数（增量渲染的关键）
+let lastTaskSig = "";
+let lastTreeSig = "";
+let spanStarts = {};       // span_id -> 起止（相对秒）
+let spanIndex = {};        // span_id -> span 数据
+let selectedSpan = null;
+let view = "timeline";
+
+function toast(text) {
+  const t = $("#toast"); t.textContent = text; t.classList.add("on");
+  clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove("on"), 1600);
+}
+
+// ---- 发送 ---------------------------------------------------------------
+$("#f").addEventListener("submit", async e => {
+  e.preventDefault();
+  const q = $("#q").value.trim(); if (!q) return;
+  $("#q").value = ""; $("#send").disabled = true;
+  try { await fetch("/api/message", {method:"POST", headers:{"Content-Type":"application/json"},
+                                     body: JSON.stringify({text:q})}); }
+  finally { $("#send").disabled = false; $("#q").focus(); }
+});
+
+// ---- 对话：只追加，不重建（否则一选中就被刷掉） ---------------------------
+function renderChat(replies) {
+  if (replies.length < rendered) { $("#chat").innerHTML = ""; rendered = 0; }
+  const box = $("#chat");
+  for (let i = rendered; i < replies.length; i++) {
+    const m = replies[i];
+    const el = document.createElement("div");
+    el.className = "msg " + (m.who === "你" ? "me" : "bot");
+    const [label, color] = ROUTE[m.route] || ["", "#8b93a4"];
+    if (label) {
+      const meta = document.createElement("div");
+      meta.className = "meta"; meta.style.color = color; meta.textContent = label;
+      el.appendChild(meta);
+    }
+    el.appendChild(document.createTextNode(m.text));
+    box.appendChild(el);
+  }
+  rendered = replies.length;
+  // 只有用户本来就在底部时才自动滚，避免打断阅读/选择
+  const nearBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 120;
+  if (nearBottom) box.scrollTop = box.scrollHeight;
+}
+
+// ---- 任务表 -------------------------------------------------------------
+function renderTasks(tasks) {
+  const sig = tasks.map(t => t.task_id + t.status + (t.todo || "") + t.duration).join("|");
+  if (sig === lastTaskSig) return;
+  lastTaskSig = sig;
+  $("#h-count").textContent = tasks.length ? `共 ${tasks.length}` : "";
+  $("#tasks tbody").innerHTML = tasks.slice(-16).map(t => {
+    const cls = CLS[t.status] || "";
+    const chain = (t.trace_chain || []).slice(-2).join("→");
+    const todo = t.status === "NEEDS_HUMAN" ? "等批：" + esc(t.todo || "")
+               : t.status === "WAITING" ? "等：" + esc(t.todo || "")
+               : t.human_touches ? "人出手 " + t.human_touches
+               : t.system_touches ? "自愈 " + t.system_touches : "";
+    const btns = t.status === "NEEDS_HUMAN"
+      ? `<button data-act="approve" data-id="${t.task_id}">批准</button>
+         <button data-act="reject" data-id="${t.task_id}">驳回</button>` : "";
+    const dur = t.duration == null ? "" : t.duration.toFixed(2) + "s";
+    return `<tr><td class="name">${esc(t.name)}</td>
+      <td class="st ${cls}">${ICON[cls] || ""} ${esc(t.status)}</td>
+      <td class="dim">${esc(chain)}</td><td class="dim">${todo}</td>
+      <td class="dim">${dur}</td><td>${btns}</td></tr>`;
+  }).join("");
+}
+
+document.addEventListener("click", async e => {
+  const btn = e.target.closest("button[data-act]");
+  if (btn) {
+    await fetch("/api/" + btn.dataset.act, {method:"POST",
+      headers:{"Content-Type":"application/json"}, body: JSON.stringify({task_id: btn.dataset.id})});
+    toast(btn.dataset.act === "approve" ? "已批准" : "已驳回");
+    return;
+  }
+  const row = e.target.closest(".trow");
+  if (row && row.dataset.id) { selectedSpan = row.dataset.id; renderDetail(); markSelected(); }
+});
+
+// ---- Trace：时间轴 ------------------------------------------------------
+function collectSpans(node, out) {
+  out.push(node);
+  for (const c of node.children || []) collectSpans(c, out);
+  return out;
+}
+
+function renderTimeline(roots) {
+  const all = [];
+  for (const r of roots) collectSpans(r, all);
+  const t0 = Math.min(...all.map(s => s.start ?? 0));
+  const t1 = Math.max(...all.map(s => s.end ?? s.start ?? 0), t0 + 0.01);
+  const span = Math.max(0.01, t1 - t0);
+  // 只画 worker / router / event / tool 顶层，工具挂到父行后面
+  const rows = all.filter(s => s.kind !== "tool").slice(-40);
+  $("#timeline").innerHTML = rows.map(s => {
+    const st = (s.start ?? t0) - t0, en = (s.end ?? s.start ?? t0) - t0;
+    const left = (st / span * 100).toFixed(2);
+    const width = Math.max(0.4, ((en - st) / span * 100)).toFixed(2);
+    const cls = s.status === "ok" ? "ok" : s.status === "error" ? "error"
+              : s.status === "warn" ? "warn" : s.status === "running" ? "running" : "wait";
+    const dur = (en - st).toFixed(2) + "s";
+    const ind = s.kind === "tool" ? "· " : "";
+    return `<div class="row trow" data-id="${s.span_id}">
+      <div class="nm lv${Math.min(3, s.depth || 0)}">${ind}${esc(s.name)}</div>
+      <div class="bars"><div class="bar ${cls}" style="left:${left}%;width:${width}%"></div></div>
+      <div class="du">${dur}</div></div>`;
+  }).join("") || '<span class="dim">（还没有任务）</span>';
+}
+
+// ---- Trace：调用树 ------------------------------------------------------
+function renderTree(roots) {
+  const lines = [];
+  (function walk(nodes, depth) {
+    for (const n of nodes) {
+      const dur = n.end != null && n.start != null ? (n.end - n.start).toFixed(2) + "s" : "";
+      const warn = n.warnings ? ` <span class="warn">⚠${n.warnings}</span>` : "";
+      const err = n.status === "error" ? ' <span class="error">✕</span>' : "";
+      lines.push(`<div class="trow" data-id="${n.span_id}">
+        <span class="lv${Math.min(3, depth)}">${"　".repeat(depth)}${ICON[n.status] || "·"}
+        ${esc(n.name)}</span><span class="du">${dur}</span>${warn}${err}</div>`);
+      walk(n.children || [], depth + 1);
+    }
+  })(roots, 0);
+  $("#tree").innerHTML = lines.join("") || '<span class="dim">（还没有任务）</span>';
+}
+
+function markSelected() {
+  document.querySelectorAll(".trow").forEach(el => {
+    el.classList.toggle("sel", el.dataset.id === selectedSpan);
+  });
+}
+
+function renderDetail() {
+  const s = spanIndex[selectedSpan];
+  const box = $("#detail");
+  if (!s) { box.className = "dim"; box.textContent = "点上面的 Trace 看细节"; return; }
+  box.className = "";
+  const dur = s.start != null && s.end != null ? (s.end - s.start).toFixed(2) + "s" : "进行中";
+  const bits = [
+    ["名称", esc(s.name)], ["类型", esc(s.kind)], ["状态", esc(s.status)],
+    ["耗时", dur], ["告警", s.warnings || 0],
+  ];
+  if (s.tokens) bits.push(["tokens", esc(s.tokens)]);
+  let html = `<div class="kv">${bits.map(([k, v]) => `<span>${k}</span><span>${v}</span>`).join("")}</div>`;
+  if (s.input) html += `<div class="dim" style="margin:6px 0 4px">输入</div><pre>${esc(s.input)}</pre>`;
+  if (s.output) html += `<div class="dim" style="margin:6px 0 4px">输出</div><pre>${esc(s.output)}</pre>`;
+  if (s.error) html += `<div class="error" style="margin:6px 0 4px">错误</div><pre class="error">${esc(s.error)}</pre>`;
+  box.innerHTML = html;
+}
+
+// ---- 视图切换 -----------------------------------------------------------
+document.querySelectorAll(".tabs button").forEach(b => {
+  b.addEventListener("click", () => {
+    view = b.dataset.view;
+    document.querySelectorAll(".tabs button").forEach(x => x.classList.toggle("on", x === b));
+    $("#timeline").style.display = view === "timeline" ? "" : "none";
+    $("#tree").style.display = view === "tree" ? "" : "none";
+    drawTrace();
+  });
+});
+
+let lastRoots = [];
+function drawTrace() {
+  if (view === "timeline") renderTimeline(lastRoots); else renderTree(lastRoots);
+  markSelected();
+}
+
+// ---- 轮询 ---------------------------------------------------------------
+async function tick() {
+  try {
+    const r = await fetch(`/api/state?since=${seq}`);
+    const d = await r.json();
+    seq = d.seq;
+    renderChat(d.replies || []);
+
+    if (d.model) $("#h-model").textContent = "模型：" + d.model;
+    if (d.run_id) $("#h-run").textContent = d.run_id;
+
+    renderTasks(d.tasks || []);
+
+    const roots = (d.tree && d.tree.roots) || [];
+    lastRoots = roots;
+    spanIndex = {};
+    const flat = [];
+    for (const r of roots) collectSpans(r, flat);
+    flat.forEach(s => { spanIndex[s.span_id] = s; });
+    drawTrace();
+    if (selectedSpan) renderDetail();
+
+    const alerts = (d.events || []).filter(e => e.kind === "alert").slice(-20);
+    for (const a of alerts) {
+      const div = document.createElement("div");
+      div.className = "alert lvl-" + (a.level || "INFO");
+      div.textContent = `${a.level || "INFO"} ${a.source || ""} ${a.message || ""}`;
+      $("#alerts") && $("#alerts").appendChild(div);
+    }
+
+    const s = d.summary || {};
+    if (s.status) {
+      const st = s.status, a = s.attention || {};
+      $("#h-sum").textContent = `在做 ${(st.RUNNING||0)+(st.PENDING||0)} · 等结果 ${st.WAITING||0}`
+        + ` · 等你批 ${st.NEEDS_HUMAN||0} · 完成 ${st.SUCCEEDED||0} · 失败 ${st.FAILED||0}`
+        + ` · 无进展 ${(st.SUSPECT||0)+(st.STALLED||0)}`;
+      $("#f-attn").innerHTML = `Router 判断 <b>${s.router_calls||0}</b> 次，省下 <b>${s.router_skipped||0}</b> 次`;
+      $("#f-inc").innerHTML = `你出手 <b>${a.human_touches||0}</b> 次，系统自己救 <b>${a.system_touches||0}</b> 次`;
+      $("#f-wd").innerHTML = `Watchdog <b>${s.watchdog || "运行中"}</b>`;
+    }
+  } catch (e) { /* 网络抖动忽略 */ }
+  setTimeout(tick, 700);
+}
+tick();
+</script>
+</body></html>
